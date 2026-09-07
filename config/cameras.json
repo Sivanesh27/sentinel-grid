@@ -1,0 +1,147 @@
+[
+  {
+    "id": "cam_01",
+    "name": "Sector Alpha - Perimeter Line",
+    "source": "sample_videos/perimeter_cam_01.mp4",
+    "fps": 15,
+    "night_mode": false,
+    "fence": {
+      "name": "Custom Dragged Fence",
+      "polygon": [
+        [
+          110.0,
+          310.0
+        ],
+        [
+          530.0,
+          310.0
+        ],
+        [
+          530.0,
+          450.0
+        ],
+        [
+          110.0,
+          450.0
+        ]
+      ],
+      "inbound_direction": "down"
+    }
+  },
+  {
+    "id": "cam_02",
+    "name": "Sector Bravo - Vehicle Checkpoint",
+    "source": "sample_videos/checkpoint_cam_02.mp4",
+    "fps": 15,
+    "night_mode": false,
+    "fence": {
+      "name": "Checkpoint Barrier Line",
+      "polygon": [
+        [
+          258.0,
+          240.0
+        ],
+        [
+          441.0,
+          244.0
+        ],
+        [
+          435.0,
+          470.0
+        ],
+        [
+          236.0,
+          470.0
+        ]
+      ],
+      "inbound_direction": "down"
+    }
+  },
+  {
+    "id": "cam_03",
+    "name": "Sector Charlie - Night Vision Infrared",
+    "source": "sample_videos/Night_vision_style_CCTV_footag.mp4",
+    "fps": 20,
+    "night_mode": true,
+    "fence": {
+      "name": "Infrared Perimeter Fence Corridor",
+      "polygon": [
+        [
+          10.0,
+          127.0
+        ],
+        [
+          375.0,
+          126.0
+        ],
+        [
+          302.0,
+          470.0
+        ],
+        [
+          10.0,
+          470.0
+        ]
+      ],
+      "inbound_direction": "down"
+    }
+  },
+  {
+    "id": "cam_04",
+    "name": "Sector Delta - Overhead Access Road",
+    "source": "sample_videos/Fixed_overhead_CCTV_camera_vie.mp4",
+    "fps": 20,
+    "night_mode": false,
+    "fence": {
+      "name": "Overhead Roadway Access Gate",
+      "polygon": [
+        [
+          10.0,
+          115.0
+        ],
+        [
+          375.0,
+          135.0
+        ],
+        [
+          540.0,
+          470.0
+        ],
+        [
+          10.0,
+          470.0
+        ]
+      ],
+      "inbound_direction": "down"
+    }
+  },
+  {
+    "id": "cam_05",
+    "name": "Sector Echo - Static Security Outpost",
+    "source": "sample_videos/Static_fixed_angle_CCTV_secur.mp4",
+    "fps": 20,
+    "night_mode": false,
+    "fence": {
+      "name": "Border Outpost Fence Crossing Zone",
+      "polygon": [
+        [
+          10.0,
+          127.0
+        ],
+        [
+          350.0,
+          125.0
+        ],
+        [
+          258.0,
+          470.0
+        ],
+        [
+          10.0,
+          470.0
+        ]
+      ],
+      "inbound_direction": "down"
+    }
+  }
+]
