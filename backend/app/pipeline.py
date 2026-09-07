@@ -308,21 +308,30 @@ class CameraPipeline:
                     except Exception:
                         pass
 
-                # 5. Render tactical overlays on frame
-                annotated_frame = self._draw_annotations(raw_frame, active_tracks, assessments)
+                # 5. Render tactical overlays and broadcast only if clients are connected
+                has_viewers = len(ws_manager.active_connections) > 0
 
-                # 6. Encode annotated frame & broadcast to WebSocket
-                _, enc_buf = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 55])
-                frame_b64 = base64.b64encode(enc_buf).decode('utf-8')
+                if has_viewers:
+                    annotated_frame = self._draw_annotations(raw_frame, active_tracks, assessments)
+                    _, enc_buf = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 55])
+                    frame_b64 = base64.b64encode(enc_buf).decode('utf-8')
 
-                await ws_manager.broadcast_frame(
-                    camera_id=self.camera_id,
-                    frame_base64=f"data:image/jpeg;base64,{frame_b64}",
-                    fps=self.current_fps,
-                    active_tracks=len(active_tracks)
-                )
+                    await ws_manager.broadcast_frame(
+                        camera_id=self.camera_id,
+                        frame_base64=f"data:image/jpeg;base64,{frame_b64}",
+                        fps=self.current_fps,
+                        active_tracks=len(active_tracks)
+                    )
 
-                await asyncio.sleep(0.005)
+                # Frame rate pacing
+                elapsed = time.time() - curr_time
+                if has_viewers:
+                    target_delay = 1.0 / max(1.0, self.target_fps)
+                    sleep_dur = max(0.015, target_delay - elapsed)
+                    await asyncio.sleep(sleep_dur)
+                else:
+                    # Idle standby: 5 FPS sleep keeps CPU at <1% for cloud health probes
+                    await asyncio.sleep(0.20)
 
             except asyncio.CancelledError:
                 break
