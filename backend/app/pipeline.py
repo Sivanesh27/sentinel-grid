@@ -14,6 +14,8 @@ from typing import Dict, Any, List, Optional
 import cv2
 import numpy as np
 
+cv2.setNumThreads(1)
+
 from app.ingestion.video_source import VideoStreamSource
 from app.detection.detector import Detector
 from app.tracking.tracker import MultiObjectTracker, TrackState
@@ -181,7 +183,7 @@ class CameraPipeline:
         while self.running:
             try:
                 self.frame_idx += 1
-                ret, raw_frame = await loop.run_in_executor(None, self.video_source.get_frame)
+                ret, raw_frame = self.video_source.get_frame()
                 if not ret or raw_frame is None:
                     await asyncio.sleep(0.02)
                     continue

@@ -10,6 +10,8 @@ import cv2
 import numpy as np
 from typing import Tuple, Optional
 
+cv2.setNumThreads(1)
+
 
 class VideoStreamSource:
     def __init__(self, source_path: str, target_fps: int = 15, camera_id: str = "cam_01"):
@@ -56,13 +58,6 @@ class VideoStreamSource:
         Retrieves the next frame with minimal decoding latency.
         Loops video automatically at EOF.
         """
-        now = time.time()
-        elapsed = now - self.last_frame_time
-        sleep_needed = self.frame_delay - elapsed
-        if sleep_needed > 0.002:
-            time.sleep(sleep_needed)
-        self.last_frame_time = time.time()
-
         if not self.is_synthetic and self.cap is not None:
             ret, frame = self.cap.read()
             if not ret or frame is None:
