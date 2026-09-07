@@ -42,10 +42,23 @@ class Detector:
         self.target_class_ids = list(TARGET_CLASSES.keys())
         self.imgsz = imgsz
         
+        resolved_model_path = model_name
+        possible_paths = [
+            model_name,
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", model_name)),
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..", model_name)),
+            f"/app/{model_name}",
+            f"/app/backend/{model_name}"
+        ]
+        for p in possible_paths:
+            if os.path.exists(p):
+                resolved_model_path = p
+                break
+
         try:
-            self.model = YOLO(model_name)
+            self.model = YOLO(resolved_model_path)
         except Exception as e:
-            print(f"[Detector] Error loading {model_name}: {e}. Retrying default yolov8n.pt...")
+            print(f"[Detector] Error loading {resolved_model_path}: {e}. Retrying default yolov8n.pt...")
             self.model = YOLO("yolov8n.pt")
 
         # Warm up model to ensure weights and layers are fused safely

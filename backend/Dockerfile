@@ -11,7 +11,8 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    SENTINEL_DB_PATH=/app/sentinel.db
+    SENTINEL_DB_PATH=/app/sentinel.db \
+    YOLO_CONFIG_DIR=/tmp/Ultralytics
 
 WORKDIR /app
 
@@ -29,9 +30,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Pre-cache YOLOv8 weights so container starts instantly without download latency
-RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
-
 # Copy configuration and application source
 COPY config /app/config
 COPY backend /app/backend
@@ -39,10 +37,12 @@ COPY backend /app/backend
 # Copy built frontend assets from Stage 1 into /app/frontend/dist
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
+# Pre-cache YOLOv8 weights directly inside /app/backend/yolov8n.pt
+WORKDIR /app/backend
+RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
+
 # Generate initial sample test videos if not present
 RUN python /app/backend/scripts/generate_sample_videos.py
-
-WORKDIR /app/backend
 
 # Expose Render standard port 10000 and standard 8000
 EXPOSE 10000 8000

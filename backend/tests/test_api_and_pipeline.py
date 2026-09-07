@@ -5,6 +5,7 @@ Tests camera management, night mode, dynamic drag-and-drop fence updates, config
 
 import os
 import sys
+import time
 import pytest
 from fastapi.testclient import TestClient
 
@@ -20,10 +21,16 @@ def test_api_endpoints_with_lifespan():
         assert root_res.status_code == 200
         assert "html" in root_res.headers.get("content-type", "") or "Sentinel Grid" in root_res.text
 
-        # 2. Health
-        health_res = client.get("/api/health")
-        assert health_res.status_code == 200
-        health_data = health_res.json()
+        # 2. Health (Poll briefly for background pipeline startup)
+        health_data = {}
+        for _ in range(25):
+            health_res = client.get("/api/health")
+            assert health_res.status_code == 200
+            health_data = health_res.json()
+            if health_data.get("active_cameras", 0) >= 1:
+                break
+            time.sleep(0.1)
+
         assert health_data["status"] == "online"
         assert health_data["active_cameras"] >= 1
 

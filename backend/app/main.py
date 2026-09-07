@@ -51,10 +51,14 @@ def ensure_sample_videos():
 async def bootstrap_pipelines(risk_engine: RiskEngine):
     """Asynchronously loads models and launches camera pipelines in the background."""
     try:
-        ensure_sample_videos()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, ensure_sample_videos)
 
-        # Load models asynchronously
-        detector = Detector(model_name="yolov8n.pt", conf_threshold=0.35, imgsz=320)
+        # Load YOLO model in threadpool so main asyncio thread is never blocked
+        detector = await loop.run_in_executor(
+            None,
+            lambda: Detector(model_name="yolov8n.pt", conf_threshold=0.35, imgsz=320)
+        )
         plate_reader = PlateReader(gpu=False)
 
         cameras_config: List[Dict[str, Any]] = []
