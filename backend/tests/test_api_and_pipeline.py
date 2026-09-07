@@ -15,10 +15,10 @@ from app.main import app
 
 def test_api_endpoints_with_lifespan():
     with TestClient(app) as client:
-        # 1. Root
+        # 1. Root (Serves Frontend SPA HTML or JSON info)
         root_res = client.get("/")
         assert root_res.status_code == 200
-        assert root_res.json()["name"] == "Sentinel Grid"
+        assert "html" in root_res.headers.get("content-type", "") or "Sentinel Grid" in root_res.text
 
         # 2. Health
         health_res = client.get("/api/health")

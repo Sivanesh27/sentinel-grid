@@ -1,3 +1,12 @@
+# Stage 1: Build React Frontend
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: Backend Runtime & Full-Stack Server
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -27,6 +36,9 @@ RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
 # Copy configuration and application source
 COPY config /app/config
 COPY backend /app/backend
+
+# Copy built frontend assets from Stage 1 into /app/frontend/dist
+COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
 # Generate initial sample test videos if not present
 RUN python /app/backend/scripts/generate_sample_videos.py

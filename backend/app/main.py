@@ -147,18 +147,6 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api")
 
 
-@app.get("/")
-async def root():
-    return {
-        "name": "Sentinel Grid",
-        "version": "1.0.0",
-        "description": "AI Video Analytics for Border CCTV Surveillance (PS 26187)",
-        "docs_url": "/docs",
-        "websocket_endpoint": "/ws/live",
-        "active_cameras": list(routes_module.active_pipelines.keys())
-    }
-
-
 @app.websocket("/ws/live")
 async def websocket_live_feed(websocket: WebSocket):
     """Live WebSocket stream for video frames, object telemetry, and security alerts."""
@@ -176,3 +164,19 @@ async def websocket_live_feed(websocket: WebSocket):
         await ws_manager.disconnect(websocket)
     except Exception:
         await ws_manager.disconnect(websocket)
+
+
+# Mount pre-built React Frontend if frontend/dist exists
+FRONTEND_DIST_DIR = os.path.join(ROOT_DIR, "frontend/dist")
+if os.path.exists(FRONTEND_DIST_DIR) and os.path.exists(os.path.join(FRONTEND_DIST_DIR, "index.html")):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST_DIR, html=True), name="frontend")
+else:
+    @app.get("/")
+    async def root():
+        return {
+            "name": "Sentinel Grid",
+            "status": "online",
+            "docs_url": "/docs",
+            "websocket_endpoint": "/ws/live",
+            "active_cameras": list(routes_module.active_pipelines.keys())
+        }
