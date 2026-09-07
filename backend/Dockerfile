@@ -11,8 +11,7 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    SENTINEL_DB_PATH=/app/sentinel.db \
-    PORT=8000
+    SENTINEL_DB_PATH=/app/sentinel.db
 
 WORKDIR /app
 
@@ -45,6 +44,7 @@ RUN python /app/backend/scripts/generate_sample_videos.py
 
 WORKDIR /app/backend
 
-EXPOSE 8000
+# Expose Render standard port 10000 and standard 8000
+EXPOSE 10000 8000
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["python", "run_server.py"]
