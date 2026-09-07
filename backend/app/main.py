@@ -48,71 +48,77 @@ def ensure_sample_videos():
             print(f"[Main] Notice: could not pre-generate video files: {e}. VideoStreamSource will use on-the-fly synthetic generation.")
 
 
+async def bootstrap_pipelines(risk_engine: RiskEngine):
+    """Asynchronously loads models and launches camera pipelines in the background."""
+    try:
+        ensure_sample_videos()
+
+        # Load models asynchronously
+        detector = Detector(model_name="yolov8n.pt", conf_threshold=0.35, imgsz=320)
+        plate_reader = PlateReader(gpu=False)
+
+        cameras_config: List[Dict[str, Any]] = []
+        if os.path.exists(CAMERAS_CONFIG_PATH):
+            try:
+                with open(CAMERAS_CONFIG_PATH, "r", encoding="utf-8") as f:
+                    cameras_config = json.load(f)
+            except Exception as e:
+                print(f"[Main] Error reading cameras config: {e}")
+
+        if not cameras_config:
+            cameras_config = [
+                {
+                    "id": "cam_01",
+                    "name": "Perimeter Sector Alpha",
+                    "source": "sample_videos/perimeter_cam_01.mp4",
+                    "fps": 15,
+                    "night_mode": False,
+                    "fence": {
+                        "name": "Perimeter Buffer Zone",
+                        "polygon": [[100, 300], [540, 300], [540, 460], [100, 460]],
+                        "inbound_direction": "down"
+                    }
+                }
+            ]
+
+        num_cams = len(cameras_config)
+        cadence = 1 if num_cams <= 2 else (2 if num_cams <= 4 else 3)
+        print(f"[Main] Auto-calibrated detection cadence: 1/{cadence} for {num_cams} simultaneous streams.")
+
+        # Launch per-camera surveillance pipelines
+        for cam_cfg in cameras_config:
+            pipeline = CameraPipeline(
+                camera_config=cam_cfg,
+                detector=detector,
+                plate_reader=plate_reader,
+                risk_engine=risk_engine,
+                detect_interval=cadence
+            )
+            routes_module.active_pipelines[pipeline.camera_id] = pipeline
+            task = asyncio.create_task(pipeline.run())
+            pipeline_tasks.append(task)
+
+        print(f"[Main] Successfully launched {len(pipeline_tasks)} camera pipeline workers.")
+    except Exception as e:
+        print(f"[Main] Error during background pipeline bootstrap: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initializes models, database, and launches surveillance pipeline background workers."""
+    """Initializes server instantly so HTTP port binds in < 50ms for cloud health checks."""
     print("=" * 65)
     print("  SENTINEL GRID // AI BORDER SURVEILLANCE PLATFORM")
     print("  Smart India Hackathon 2026 (PS 26187)")
     print("=" * 65)
 
-    # 1. Initialize SQLite Database
+    # 1. Initialize SQLite Database & Risk Engine
     init_db()
-    print("[Main] SQLite database initialized.")
-
-    # 2. Check and generate sample videos if needed
-    ensure_sample_videos()
-
-    # 3. Initialize Shared Perception & Fusion Engines
-    detector = Detector(model_name="yolov8n.pt", conf_threshold=0.35, imgsz=320)
-    plate_reader = PlateReader(gpu=False)
     risk_engine = RiskEngine()
-
     routes_module.global_risk_engine = risk_engine
+    print("[Main] SQLite database and Risk Engine ready.")
 
-    # 4. Load Camera Configurations
-    cameras_config: List[Dict[str, Any]] = []
-    if os.path.exists(CAMERAS_CONFIG_PATH):
-        try:
-            with open(CAMERAS_CONFIG_PATH, "r", encoding="utf-8") as f:
-                cameras_config = json.load(f)
-        except Exception as e:
-            print(f"[Main] Error reading cameras config: {e}")
-
-    if not cameras_config:
-        cameras_config = [
-            {
-                "id": "cam_01",
-                "name": "Perimeter Sector Alpha",
-                "source": "sample_videos/perimeter_cam_01.mp4",
-                "fps": 15,
-                "night_mode": False,
-                "fence": {
-                    "name": "Perimeter Buffer Zone",
-                    "polygon": [[100, 300], [540, 300], [540, 460], [100, 460]],
-                    "inbound_direction": "down"
-                }
-            }
-        ]
-
-    num_cams = len(cameras_config)
-    cadence = 1 if num_cams <= 2 else (2 if num_cams <= 4 else 3)
-    print(f"[Main] Auto-calibrated detection cadence: 1/{cadence} for {num_cams} simultaneous streams.")
-
-    # 5. Launch per-camera surveillance pipelines
-    for cam_cfg in cameras_config:
-        pipeline = CameraPipeline(
-            camera_config=cam_cfg,
-            detector=detector,
-            plate_reader=plate_reader,
-            risk_engine=risk_engine,
-            detect_interval=cadence
-        )
-        routes_module.active_pipelines[pipeline.camera_id] = pipeline
-        task = asyncio.create_task(pipeline.run())
-        pipeline_tasks.append(task)
-
-    print(f"[Main] Successfully launched {len(pipeline_tasks)} camera pipeline workers.")
+    # 2. Launch heavy model loading & pipelines in background so Uvicorn opens port INSTANTLY
+    init_task = asyncio.create_task(bootstrap_pipelines(risk_engine))
 
     yield
 
@@ -122,6 +128,8 @@ async def lifespan(app: FastAPI):
         p.stop()
     for task in pipeline_tasks:
         task.cancel()
+    if not init_task.done():
+        init_task.cancel()
     try:
         await asyncio.wait_for(asyncio.gather(*pipeline_tasks, return_exceptions=True), timeout=2.0)
     except Exception:
